@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mumbai Hub Daily Meeting</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#12345b;
+    min-height:100vh;padding:24px;
+  }
+  .app{max-width:1180px;margin:auto;display:grid;grid-template-columns:360px 1fr;gap:24px}
+  .panel{
+    background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.08);
+    height:max-content;position:sticky;top:20px
+  }
+  h1{margin:0 0 6px;font-size:25px;color:#0e3970}
+  .sub{margin:0 0 20px;color:#66788d;font-size:14px}
+  label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px;color:#23486f}
+  input[type=text],textarea{
+    width:100%;border:1px solid #ccd6e2;border-radius:10px;padding:11px;font:inherit;
+    outline:none
+  }
+  textarea{min-height:170px;resize:vertical;line-height:1.5}
+  .conductors{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .conductors input{min-width:0}
+  input:focus,textarea:focus{border-color:#2468a9;box-shadow:0 0 0 3px rgba(36,104,169,.1)}
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .photo-box{
+    border:1.5px dashed #aebdcd;border-radius:10px;padding:10px;background:#f8fafc
+  }
+  .photo-box span{font-size:12px;font-weight:700;display:block;margin-bottom:7px}
+  input[type=file]{width:100%;font-size:11px}
+  button{
+    width:100%;border:0;border-radius:11px;padding:13px;margin-top:18px;
+    background:#0e477e;color:white;font-weight:700;font-size:15px;cursor:pointer
+  }
+  button:hover{background:#0a3967}
+  .secondary{background:#e8eef5;color:#123f6b}
+  .secondary:hover{background:#dce5ef}
+  .hint{font-size:11px;color:#718096;line-height:1.45;margin-top:12px}
+  .preview-wrap{display:flex;justify-content:center}
+  canvas{
+    width:min(100%,720px);height:auto;background:#fff;border-radius:10px;
+    box-shadow:0 8px 30px rgba(0,0,0,.14)
+  }
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .panel{position:static}
+    .preview-wrap{order:-1}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="panel">
+    <h1>Mumbai Hub Daily Meeting</h1>
+    <p class="sub">Upload 4 meeting photos, enter the M.O.M., and export one WhatsApp-ready image.</p>
+
+    <label>Date</label>
+    <input id="date" type="text" placeholder="16 September 2026">
+
+    <label>Meeting Photos</label>
+    <div class="photo-grid">
+      <div class="photo-box"><span>Photo 1</span><input id="p1" type="file" accept="image/*"></div>
+      <div class="photo-box"><span>Photo 2</span><input id="p2" type="file" accept="image/*"></div>
+      <div class="photo-box"><span>Photo 3</span><input id="p3" type="file" accept="image/*"></div>
+      <div class="photo-box"><span>Photo 4</span><input id="p4" type="file" accept="image/*"></div>
+    </div>
+
+    <label>M.O.M. / Meeting Points</label>
+    <textarea id="mom" placeholder="1. Discussed daily operational priorities&#10;2. Pending tasks and responsibilities&#10;3. Follow-up / action points"></textarea>
+
+    <label>Meeting Taken By</label>
+    <div class="conductors">
+      <input id="person1" type="text" placeholder="Name 1">
+      <input id="desig1" type="text" placeholder="Designation 1">
+      <input id="person2" type="text" placeholder="Name 2">
+      <input id="desig2" type="text" placeholder="Designation 2">
+      <input id="person3" type="text" placeholder="Name 3">
+      <input id="desig3" type="text" placeholder="Designation 3">
+    </div>
+
+    <button id="download">Download Final Image (PNG)</button>
+    <button class="secondary" id="clear">Clear Photos & M.O.M.</button>
+    <div class="hint">Everything runs in this page itself. Your photos are not uploaded to a server. The final image is generated in your browser.</div>
+  </section>
+
+  <section class="preview-wrap">
+    <canvas id="canvas" width="1080" height="1430"></canvas>
+  </section>
+</div>
+
+<script>
+const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+const dateEl=document.getElementById('date'), momEl=document.getElementById('mom');
+const imgs=[null,null,null,null];
+
+function today(){
+  const d=new Date();
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+}
+dateEl.value=today();
+
+function roundedRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+function fitImage(img,x,y,w,h){
+  const scale=Math.max(w/img.width,h/img.height);
+  const nw=img.width*scale, nh=img.height*scale;
+  const sx=(nw-w)/2, sy=(nh-h)/2;
+  ctx.save();
+  roundedRect(x,y,w,h,16);ctx.clip();
+  ctx.drawImage(img,x-sx,y-sy,nw,nh);
+  ctx.restore();
+}
+
+function wrapText(text,x,y,maxWidth,lineHeight,maxLines){
+  const words=text.split(/\s+/), lines=[];let line='';
+  for(const word of words){
+    const test=line?line+' '+word:word;
+    if(ctx.measureText(test).width>maxWidth && line){
+      lines.push(line);line=word;
+      if(lines.length===maxLines-1) break;
+    }else line=test;
+  }
+  if(lines.length<maxLines && line) lines.push(line);
+  if(words.length && lines.length===maxLines){
+    let used=lines.join(' ').split(/\s+/).length;
+    if(used<words.length){
+      let last=lines[maxLines-1];
+      while(ctx.measureText(last+'…').width>maxWidth && last.length) last=last.slice(0,-1);
+      lines[maxLines-1]=last+'…';
+    }
+  }
+  lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));
+}
+
+function draw(){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+
+  // Header
+  const grad=ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'#f3f8fc');grad.addColorStop(1,'#dbeaf5');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,205);
+  ctx.fillStyle='#123f73';ctx.font='bold 58px Arial';
+  ctx.fillText('Mumbai Hub',55,76);
+  ctx.font='italic bold 48px Arial';
+  ctx.fillText('Daily Meeting',55,135);
+  ctx.fillStyle='#1684c7';ctx.fillRect(55,153,250,7);
+  ctx.fillStyle='#55708c';ctx.font='bold 21px Arial';
+  ctx.fillText(dateEl.value||today(),55,188);
+
+  // subtle Mumbai skyline
+  ctx.globalAlpha=.12;ctx.fillStyle='#1c5b89';
+  for(let i=0;i<18;i++){
+    const x=650+i*25, bh=25+(i%5)*18;
+    ctx.fillRect(x,180-bh,18,bh);
+  }
+  ctx.globalAlpha=1;
+
+  // Photo grid
+  const positions=[
+    [45,230,480,315],[555,230,480,315],
+    [45,565,480,315],[555,565,480,315]
+  ];
+  positions.forEach((p,i)=>{
+    const [x,y,w,h]=p;
+    ctx.fillStyle='#f5f8fb';roundedRect(x,y,w,h,18);ctx.fill();
+    ctx.strokeStyle='#b6c4d1';ctx.lineWidth=3;roundedRect(x,y,w,h,18);ctx.stroke();
+    if(imgs[i]) fitImage(imgs[i],x,y,w,h);
+    else{
+      ctx.fillStyle='#d5dee7';ctx.font='bold 55px Arial';ctx.textAlign='center';
+      ctx.fillText('📷',x+w/2,y+h/2-8);
+      ctx.font='bold 24px Arial';ctx.fillStyle='#718399';
+      ctx.fillText('Photo '+(i+1),x+w/2,y+h/2+40);ctx.textAlign='left';
+    }
+  });
+
+  // MOM panel
+  ctx.fillStyle='#0f4b82';roundedRect(45,910,990,365,20);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 38px Arial';ctx.fillText('M.O.M.',85,970);
+  ctx.font='20px Arial';ctx.fillText('Meeting Of the Meeting',250,970);
+
+  ctx.fillStyle='#ffffff';roundedRect(65,995,950,255,14);ctx.fill();
+  const text=momEl.value.trim();
+  ctx.fillStyle='#173f67';ctx.font='20px Arial';
+  const lines=text?text.split('\n'):[];
+  let y=1035;
+  if(!text){
+    ctx.fillStyle='#9aaabd';ctx.font='italic 19px Arial';
+    ctx.fillText('Type your meeting points in the M.O.M. box…',90,y);
+  }else{
+    lines.slice(0,9).forEach(raw=>{
+      const t=raw.trim();
+      if(!t)return;
+      ctx.fillStyle='#17609a';ctx.beginPath();ctx.arc(90,y-7,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#173f67';ctx.font='19px Arial';
+      wrapText(t,110,y,880,27,2); y+=50;
+    });
+  }
+
+  // Meeting Taken By section
+  ctx.fillStyle='#eaf1f7';roundedRect(45,1288,990,92,16);ctx.fill();
+  ctx.fillStyle='#0f4b82';ctx.font='bold 24px Arial';
+  ctx.fillText('MEETING TAKEN BY',70,1320);
+
+  const people=[
+    [document.getElementById('person1').value.trim(),document.getElementById('desig1').value.trim()],
+    [document.getElementById('person2').value.trim(),document.getElementById('desig2').value.trim()],
+    [document.getElementById('person3').value.trim(),document.getElementById('desig3').value.trim()]
+  ];
+  const centers=[430,650,870];
+  people.forEach((p,i)=>{
+    ctx.textAlign='center';
+    ctx.fillStyle='#173f67';ctx.font='bold 18px Arial';
+    ctx.fillText(p[0]||'Name',centers[i],1315);
+    ctx.fillStyle='#718399';ctx.font='14px Arial';
+    ctx.fillText(p[1]||'Designation',centers[i],1340);
+  });
+  ctx.textAlign='left';
+
+  // Footer
+  ctx.fillStyle='#f2f6fa';ctx.fillRect(0,1380,W,50);
+  ctx.fillStyle='#123f73';ctx.font='bold 16px Arial';
+  ctx.fillText('Together We Keep Mumbai Moving',55,1412);
+  ctx.fillStyle='#d7a61d';ctx.fillRect(820,1402,210,5);
+}
+
+['date','mom','person1','desig1','person2','desig2','person3','desig3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+
+[1,2,3,4].forEach((n,i)=>{
+  document.getElementById('p'+n).addEventListener('change',e=>{
+    const file=e.target.files[0]; if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{imgs[i]=img;draw();};
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+document.getElementById('download').addEventListener('click',()=>{
+  const link=document.createElement('a');
+  const safeDate=(dateEl.value||'meeting').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
+  link.download='Mumbai-Hub-Daily-Meeting-'+safeDate+'.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+});
+
+document.getElementById('clear').addEventListener('click',()=>{
+  imgs.fill(null);
+  ['p1','p2','p3','p4'].forEach(id=>document.getElementById(id).value='');
+  ['person1','desig1','person2','desig2','person3','desig3'].forEach(id=>document.getElementById(id).value='');
+  momEl.value='';
+  dateEl.value=today();
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>
