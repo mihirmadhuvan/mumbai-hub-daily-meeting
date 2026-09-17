@@ -10,7 +10,7 @@
     margin:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#12345b;
     min-height:100vh;padding:24px;
   }
-  .app{max-width:1180px;margin:auto;display:grid;grid-template-columns:360px 1fr;gap:24px}
+  .app{max-width:1440px;margin:auto;display:grid;grid-template-columns:360px 1fr;gap:24px}
   .panel{
     background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.08);
     height:max-content;position:sticky;top:20px
@@ -42,7 +42,7 @@
   .hint{font-size:11px;color:#718096;line-height:1.45;margin-top:12px}
   .preview-wrap{display:flex;justify-content:center}
   canvas{
-    width:min(100%,720px);height:auto;background:#fff;border-radius:10px;
+    width:min(100%,1300px);height:auto;background:#fff;border-radius:10px;
     box-shadow:0 8px 30px rgba(0,0,0,.14)
   }
   @media(max-width:900px){
@@ -82,13 +82,13 @@
       <input id="desig3" type="text" placeholder="Designation 3">
     </div>
 
-    <button id="download">Download Final Image (PNG)</button>
+    <button id="download">Download Final Image (JPG)</button>
     <button class="secondary" id="clear">Clear Photos & M.O.M.</button>
     <div class="hint">Everything runs in this page itself. Your photos are not uploaded to a server. The final image is generated in your browser.</div>
   </section>
 
   <section class="preview-wrap">
-    <canvas id="canvas" width="1080" height="1430"></canvas>
+    <canvas id="canvas" width="1600" height="1000"></canvas>
   </section>
 </div>
 
@@ -148,89 +148,107 @@ function draw(){
   // Header
   const grad=ctx.createLinearGradient(0,0,W,0);
   grad.addColorStop(0,'#f3f8fc');grad.addColorStop(1,'#dbeaf5');
-  ctx.fillStyle=grad;ctx.fillRect(0,0,W,205);
-  ctx.fillStyle='#123f73';ctx.font='bold 58px Arial';
-  ctx.fillText('Mumbai Hub',55,76);
-  ctx.font='italic bold 48px Arial';
-  ctx.fillText('Daily Meeting',55,135);
-  ctx.fillStyle='#1684c7';ctx.fillRect(55,153,250,7);
-  ctx.fillStyle='#55708c';ctx.font='bold 21px Arial';
-  ctx.fillText(dateEl.value||today(),55,188);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,145);
+  ctx.fillStyle='#123f73';ctx.font='bold 46px Arial';
+  ctx.fillText('Mumbai Hub',55,60);
+  ctx.font='italic bold 38px Arial';
+  ctx.fillText('Daily Meeting',55,108);
+  ctx.fillStyle='#1684c7';ctx.fillRect(360,88,210,6);
+  ctx.fillStyle='#55708c';ctx.font='bold 20px Arial';
+  ctx.textAlign='right';
+  ctx.fillText(dateEl.value||today(),W-55,80);
+  ctx.textAlign='left';
 
   // subtle Mumbai skyline
-  ctx.globalAlpha=.12;ctx.fillStyle='#1c5b89';
-  for(let i=0;i<18;i++){
-    const x=650+i*25, bh=25+(i%5)*18;
-    ctx.fillRect(x,180-bh,18,bh);
+  ctx.globalAlpha=.10;ctx.fillStyle='#1c5b89';
+  for(let i=0;i<26;i++){
+    const x=900+i*27, bh=20+(i%5)*16;
+    ctx.fillRect(x,145-bh,20,bh);
   }
   ctx.globalAlpha=1;
 
-  // Photo grid
+  // ---- Left column: photo grid (2x2) ----
+  const colGap=25;
+  const leftX=45, leftW=700;
+  const gridTop=170, gridBottom=770;
+  const pGap=15;
+  const photoW=(leftW-pGap)/2;
+  const photoH=(gridBottom-gridTop-pGap)/2;
   const positions=[
-    [45,230,480,315],[555,230,480,315],
-    [45,565,480,315],[555,565,480,315]
+    [leftX,gridTop,photoW,photoH],
+    [leftX+photoW+pGap,gridTop,photoW,photoH],
+    [leftX,gridTop+photoH+pGap,photoW,photoH],
+    [leftX+photoW+pGap,gridTop+photoH+pGap,photoW,photoH]
   ];
   positions.forEach((p,i)=>{
     const [x,y,w,h]=p;
-    ctx.fillStyle='#f5f8fb';roundedRect(x,y,w,h,18);ctx.fill();
-    ctx.strokeStyle='#b6c4d1';ctx.lineWidth=3;roundedRect(x,y,w,h,18);ctx.stroke();
+    ctx.fillStyle='#f5f8fb';roundedRect(x,y,w,h,16);ctx.fill();
+    ctx.strokeStyle='#b6c4d1';ctx.lineWidth=3;roundedRect(x,y,w,h,16);ctx.stroke();
     if(imgs[i]) fitImage(imgs[i],x,y,w,h);
     else{
-      ctx.fillStyle='#d5dee7';ctx.font='bold 55px Arial';ctx.textAlign='center';
-      ctx.fillText('📷',x+w/2,y+h/2-8);
-      ctx.font='bold 24px Arial';ctx.fillStyle='#718399';
-      ctx.fillText('Photo '+(i+1),x+w/2,y+h/2+40);ctx.textAlign='left';
+      ctx.fillStyle='#d5dee7';ctx.font='bold 48px Arial';ctx.textAlign='center';
+      ctx.fillText('📷',x+w/2,y+h/2-6);
+      ctx.font='bold 20px Arial';ctx.fillStyle='#718399';
+      ctx.fillText('Photo '+(i+1),x+w/2,y+h/2+34);ctx.textAlign='left';
     }
   });
 
-  // MOM panel
-  ctx.fillStyle='#0f4b82';roundedRect(45,910,990,365,20);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='bold 38px Arial';ctx.fillText('M.O.M.',85,970);
-  ctx.font='20px Arial';ctx.fillText('Meeting Of the Meeting',250,970);
+  // ---- Right column: M.O.M. panel ----
+  const momX=leftX+leftW+colGap, momW=W-45-momX;
+  const momTop=170, momBottom=770;
+  ctx.fillStyle='#0f4b82';roundedRect(momX,momTop,momW,momBottom-momTop,20);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 34px Arial';ctx.fillText('M.O.M.',momX+35,momTop+55);
+  ctx.font='19px Arial';ctx.fillText('Minutes of Meeting',momX+195,momTop+55);
 
-  ctx.fillStyle='#ffffff';roundedRect(65,995,950,255,14);ctx.fill();
+  const boxX=momX+20, boxY=momTop+82, boxW=momW-40, boxH=(momBottom-momTop)-82-22;
+  ctx.fillStyle='#ffffff';roundedRect(boxX,boxY,boxW,boxH,14);ctx.fill();
   const text=momEl.value.trim();
   ctx.fillStyle='#173f67';ctx.font='20px Arial';
   const lines=text?text.split('\n'):[];
-  let y=1035;
+  const lineStartX=boxX+25, textW=boxW-55;
+  let y=boxY+40;
   if(!text){
     ctx.fillStyle='#9aaabd';ctx.font='italic 19px Arial';
-    ctx.fillText('Type your meeting points in the M.O.M. box…',90,y);
+    ctx.fillText('Type your meeting points in the M.O.M. box…',lineStartX,y);
   }else{
-    lines.slice(0,9).forEach(raw=>{
+    const maxLines=Math.max(1,Math.floor((boxH-30)/50));
+    lines.slice(0,maxLines).forEach(raw=>{
       const t=raw.trim();
       if(!t)return;
-      ctx.fillStyle='#17609a';ctx.beginPath();ctx.arc(90,y-7,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#17609a';ctx.beginPath();ctx.arc(lineStartX,y-7,5,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#173f67';ctx.font='19px Arial';
-      wrapText(t,110,y,880,27,2); y+=50;
+      wrapText(t,lineStartX+20,y,textW-20,27,2); y+=50;
     });
   }
 
   // Meeting Taken By section
-  ctx.fillStyle='#eaf1f7';roundedRect(45,1288,990,92,16);ctx.fill();
-  ctx.fillStyle='#0f4b82';ctx.font='bold 24px Arial';
-  ctx.fillText('MEETING TAKEN BY',70,1320);
+  const mtbTop=790, mtbH=100;
+  ctx.fillStyle='#eaf1f7';roundedRect(45,mtbTop,W-90,mtbH,16);ctx.fill();
+  ctx.fillStyle='#0f4b82';ctx.font='bold 22px Arial';
+  ctx.fillText('MEETING TAKEN BY',70,mtbTop+35);
 
   const people=[
     [document.getElementById('person1').value.trim(),document.getElementById('desig1').value.trim()],
     [document.getElementById('person2').value.trim(),document.getElementById('desig2').value.trim()],
     [document.getElementById('person3').value.trim(),document.getElementById('desig3').value.trim()]
   ];
-  const centers=[430,650,870];
+  const usableW=W-90-330;
+  const centers=[70+330+usableW*0.16,70+330+usableW*0.5,70+330+usableW*0.84];
   people.forEach((p,i)=>{
     ctx.textAlign='center';
     ctx.fillStyle='#173f67';ctx.font='bold 18px Arial';
-    ctx.fillText(p[0]||'Name',centers[i],1315);
+    ctx.fillText(p[0]||'Name',centers[i],mtbTop+42);
     ctx.fillStyle='#718399';ctx.font='14px Arial';
-    ctx.fillText(p[1]||'Designation',centers[i],1340);
+    ctx.fillText(p[1]||'Designation',centers[i],mtbTop+68);
   });
   ctx.textAlign='left';
 
   // Footer
-  ctx.fillStyle='#f2f6fa';ctx.fillRect(0,1380,W,50);
+  const footTop=910;
+  ctx.fillStyle='#f2f6fa';ctx.fillRect(0,footTop,W,H-footTop);
   ctx.fillStyle='#123f73';ctx.font='bold 16px Arial';
-  ctx.fillText('Together We Keep Mumbai Moving',55,1412);
-  ctx.fillStyle='#d7a61d';ctx.fillRect(820,1402,210,5);
+  ctx.fillText('Together We Keep Mumbai Moving',55,footTop+32);
+  ctx.fillStyle='#d7a61d';ctx.fillRect(W-265,footTop+22,210,5);
 }
 
 ['date','mom','person1','desig1','person2','desig2','person3','desig3'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
@@ -251,8 +269,8 @@ function draw(){
 document.getElementById('download').addEventListener('click',()=>{
   const link=document.createElement('a');
   const safeDate=(dateEl.value||'meeting').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
-  link.download='Mumbai-Hub-Daily-Meeting-'+safeDate+'.png';
-  link.href=canvas.toDataURL('image/png');
+  link.download='Mumbai-Hub-Daily-Meeting-'+safeDate+'.jpg';
+  link.href=canvas.toDataURL('image/jpeg',0.92);
   link.click();
 });
 
